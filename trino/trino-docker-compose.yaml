@@ -11,7 +11,7 @@ services:
     networks:
       - dataplatform
 
-
 networks:
   dataplatform:
-    driver: bridge
+    external: true
+    name: dataplatform

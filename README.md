@@ -15,3 +15,7 @@ ForEach-Object {
 Get-ChildItem ".\DockerImages\*.tar" | ForEach-Object {
     docker load -i $_.FullName
 }
+
+
+
+docker network create dataplatform
