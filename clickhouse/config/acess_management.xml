@@ -1,0 +1,8 @@
+<yandex>
+    <users>
+        <default>
+            <!-- access management -->
+            <access_management>1</access_management>
+        </default>
+    </users>
+</yandex>
