@@ -7,6 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./etc:/etc/trino
+      - certs:/etc/trino/certs:ro
     restart: unless-stopped
     networks:
       - dataplatform
