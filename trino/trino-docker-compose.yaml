@@ -1,5 +1,41 @@
 
 services:
+  trino-cert-setup:
+    image: trinodb/trino:latest
+    container_name: trino-cert-setup
+    user: "0"
+    volumes:
+      - certs:/certs
+    environment:
+      ES_TRUSTSTORE_PASSWORD: 12345678
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        echo "Waiting for Elasticsearch CA certificate..."
+        rm -rf  /certs/es-truststore.p12 
+        until [ -f /certs/ca/ca.crt ]; do sleep 2; done
+        
+        if [ ! -f /certs/es-truststore.p12 ]; then
+          keytool -importcert -noprompt \
+            -alias elasticsearch-ca \
+            -file /certs/ca/ca.crt \
+            -keystore /certs/es-truststore.p12 \
+            -storetype PKCS12 \
+            -storepass "$$ES_TRUSTSTORE_PASSWORD"
+        fi
+
+        echo "Setting certificate permissions"
+        chmod 755 /certs
+        chmod 755 /certs/ca
+        chmod 644 /certs/ca/ca.crt
+        chmod 644 /certs/es-truststore.p12
+
+        echo "Truststore ready"
+    networks:
+      - dataplatform
+    restart: "no"
+
   trino:
     image: trinodb/trino:latest
     container_name: trino
@@ -7,10 +43,20 @@ services:
       - "8080:8080"
     volumes:
       - ./etc:/etc/trino
-      - certs:/etc/trino/certs:ro
+      - certs:/etc/trino/certs
+    environment:
+      ES_TRUSTSTORE_PASSWORD: 12345678
+    depends_on:
+      trino-cert-setup:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
       - dataplatform
+
+volumes:
+  certs:
+    external: true
+    name: elastic_certs
 
 networks:
   dataplatform:
