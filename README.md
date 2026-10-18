@@ -19,3 +19,6 @@ Get-ChildItem ".\DockerImages\*.tar" | ForEach-Object {
 
 
 docker network create dataplatform
+
+
+docker compose   .\trino_self_service_analytics\docker-compose.yml up --build

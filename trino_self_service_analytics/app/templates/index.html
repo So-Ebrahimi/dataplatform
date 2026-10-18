@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trino Analytics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">T</span><div><strong>Trino Analytics</strong><small>Self-service workspace</small></div></div>
+    <div class="status"><span class="dot"></span> Analytics workspace</div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="side-heading">DATA EXPLORER</div>
+      <label for="catalog">Catalog</label><select id="catalog"></select>
+      <label for="schema">Schema</label><select id="schema"></select>
+      <div class="side-heading table-heading">TABLES <button id="refreshTables" class="icon-button" title="Refresh tables">↻</button></div>
+      <div id="tableList" class="table-list"><p class="muted">Loading catalog…</p></div>
+      <div class="sidebar-note">Select a table to inspect its columns or preview rows.</div>
+    </aside>
+    <section class="workspace">
+      <div class="page-title">
+        <div><p class="eyebrow">EXPLORE YOUR DATA</p><h1>Analytics workspace</h1><p class="subhead">Explore tables, build queries, and turn data into answers.</p></div>
+        <button id="newQuery" class="button secondary">New query</button>
+      </div>
+      <nav class="tabs"><button class="tab active" data-tab="builder">Visual builder</button><button class="tab" data-tab="sql">SQL editor</button><button class="tab" data-tab="saved">Saved queries</button></nav>
+      <section id="builderPanel" class="panel">
+        <div class="panel-heading"><div><h2>Build a query</h2><p>Choose a table and fields. The builder creates a read-only SQL query.</p></div><span class="step-pill">NO SQL REQUIRED</span></div>
+        <div class="builder-grid">
+          <div><label for="builderTable">Source table</label><select id="builderTable"></select></div>
+          <div><label for="dimension">Group by (optional)</label><select id="dimension"><option value="">No grouping</option></select></div>
+          <div><label for="metric">Metric</label><select id="metric"><option value="*">Row count</option></select></div>
+          <div><label for="aggregation">Aggregation</label><select id="aggregation"><option value="COUNT">Count</option><option value="SUM">Sum</option><option value="AVG">Average</option><option value="MIN">Minimum</option><option value="MAX">Maximum</option></select></div>
+          <div class="full"><label for="limit">Maximum rows</label><select id="limit"><option>25</option><option selected>100</option><option>250</option><option>500</option></select></div>
+        </div>
+        <div class="builder-actions"><button id="buildQuery" class="button secondary">Generate SQL</button><button id="runBuilder" class="button primary">Run analysis →</button></div>
+      </section>
+      <section id="sqlPanel" class="panel hidden">
+        <div class="panel-heading"><div><h2>SQL editor</h2><p>Run read-only queries against catalogs available to Trino.</p></div><span class="step-pill">READ ONLY</span></div>
+        <textarea id="sqlEditor" spellcheck="false" aria-label="SQL editor">SELECT region, SUM(quantity * unit_price) AS revenue
+FROM demo.public.sales
+GROUP BY region
+ORDER BY revenue DESC
+LIMIT 100</textarea>
+        <div class="editor-actions"><input id="saveName" placeholder="Name this analysis" maxlength="160"><button id="saveQuery" class="button secondary">Save query</button><button id="runSql" class="button primary">Run query →</button></div>
+      </section>
+      <section id="savedPanel" class="panel hidden"><div class="panel-heading"><div><h2>Saved queries</h2><p>Reopen analyses saved in this workspace.</p></div></div><div id="savedList" class="saved-list"></div></section>
+      <section class="results panel">
+        <div class="results-header"><div><h2>Results</h2><p id="resultMessage">Run a query to see results here.</p></div><span id="rowCount" class="count-pill">0 rows</span></div>
+        <div id="errorBox" class="error hidden"></div>
+        <div id="resultsTable" class="table-wrap"><div class="empty-state"><span class="empty-icon">▤</span><strong>Your results will appear here</strong><span>Choose a table or run an analysis to get started.</span></div></div>
+      </section>
+      <footer>Prototype workspace · Apply your organization's authentication and access controls before production use.</footer>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
