@@ -19,6 +19,8 @@ Get-ChildItem ".\DockerImages\*.tar" | ForEach-Object {
 
 
 docker network create dataplatform
-
+docker compose -f .\elastic\elastic-docker-compose.yaml up -d
+docker compose -f .\clickhouse\clickhouse-docker-compose.yaml up -d
+docker compose -f .\deltalake\deltalake-docker-compose.yaml  up -d 
 
 docker compose   .\trino_self_service_analytics\docker-compose.yml up --build
