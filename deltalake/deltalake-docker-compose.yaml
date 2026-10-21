@@ -93,6 +93,11 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
+      HOME: /tmp
+      JAVA_TOOL_OPTIONS: "-Duser.home=/tmp -Divy.cache.dir=/tmp/ivy/cache -Divy.home=/tmp/ivy"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
     networks:
       - dataplatform
 

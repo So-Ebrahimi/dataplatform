@@ -25,15 +25,7 @@ dataplatform/
 │   └── etc/
 │       ├── catalog/
 │       └── certs/
-└── webapp/
-    ├── app/
-    │   ├── static/
-    │   └── templates/
-    ├── demo/
-    ├── trino/
-    │   └── etc/
-    │       └── catalog/
-    └── docker-compose.yml
+└── write_delta.py
 ```
 
 The `deltalake/spark/ivy` directory stores Spark's downloaded Maven dependencies. Its contents are generated and can be recreated when necessary.
@@ -134,13 +126,13 @@ docker compose -f .\deltalake\deltalake-docker-compose.yaml up -d
 
 This Compose file is expected to define the relevant services, such as Spark, MinIO, and Hive Metastore, according to your configuration.
 
-### 6.4 Start the Web Application
+### 6.4 Start the trino
 
 ```powershell
-docker compose -f .\webapp\docker-compose.yml up -d --build
+docker compose -f .\trino\trino-docker-compose.yaml up -d 
 ```
 
-The `-f` option identifies the Compose file explicitly, and `--build` rebuilds images where required.
+The `-f` option identifies the Compose file explicitly
 
 ### 6.5 Verify Running Containers
 
@@ -175,53 +167,13 @@ Install the Python dependencies in the environment where the script will run:
 python -m pip install deltalake pyarrow
 ```
 
-Create a file named `write_delta.py`:
-
-```python
-from deltalake import DeltaTable, write_deltalake
-import pyarrow as pa
-
-storage_options = {
-    "AWS_ACCESS_KEY_ID": "minioadmin",
-    "AWS_SECRET_ACCESS_KEY": "minioadmin123",
-    "AWS_ENDPOINT_URL": "http://minio:9000",
-    "AWS_REGION": "us-east-1",
-    "AWS_ALLOW_HTTP": "true",
-}
-
-data = pa.table({
-    "id": [1, 2, 3, 4],
-    "name": ["Alice", "Bob", "Charlie", "Diana"],
-    "age": [25, 30, 35, 28],
-})
-
-table_path = "s3://lake/warehouse/people_v2"
-
-write_deltalake(
-    table_path,
-    data,
-    mode="overwrite",
-    storage_options=storage_options,
-)
-
-dt = DeltaTable(
-    table_path,
-    storage_options=storage_options,
-)
-
-print("Version:", dt.version())
-print("Schema:", dt.schema().json())
-print("Files:", dt.file_uris())
-print(dt.to_pyarrow_table().to_pylist())
-```
-
 Run:
 
 ```powershell
 python .\write_delta.py
 ```
 
-**Important:** The hostname `minio` must be resolvable from the environment running Python. If Python runs on Windows rather than inside a container on the Docker network, use the published MinIO endpoint, such as `http://localhost:9000`, if that port is mapped by your Compose configuration.
+**Important:** The hostname `minio` must be resolvable from the environment running Python. If Python runs on Windows rather than inside a container on the Docker network, use the published MinIO endpoint, such as `http://localhost:9100`, if that port is mapped by your Compose configuration.
 
 The `overwrite` mode replaces the existing table contents. Use it only when you intend to recreate the example data.
 
@@ -249,16 +201,6 @@ docker exec -it spark /opt/spark/bin/spark-sql `
 
 The first startup may download Maven dependencies. This requires network access unless the dependencies are already cached.
 
-If your environment requires a temporary Java home and Ivy configuration, set these variables inside the container before launching Spark:
-
-```text
-HOME=/tmp
-JAVA_TOOL_OPTIONS=-Duser.home=/tmp -Divy.cache.dir=/tmp/ivy/cache -Divy.home=/tmp/ivy
-```
-
-These are environment variables, not SQL statements. Configure them in the container environment or in the shell used to launch Spark.
-
-Verify that the Spark, Delta Lake, Hadoop AWS, and Hive Metastore versions are compatible with one another.
 
 ## 10. Create the Hive Database and Delta Tables
 
@@ -283,18 +225,11 @@ SHOW DATABASES;
 Register the existing Delta table created by the Python example:
 
 ```sql
-CREATE TABLE IF NOT EXISTS lakehouse.people_v2
-USING DELTA
-LOCATION 's3a://lake/warehouse/people_v2';
-```
-
-Register the original `people` table only if a valid Delta table already exists at that location:
-
-```sql
 CREATE TABLE IF NOT EXISTS lakehouse.people
 USING DELTA
 LOCATION 's3a://lake/warehouse/people';
 ```
+
 
 A table created with `LOCATION` registers an existing Delta dataset; it does not generate the underlying data by itself.
 
@@ -303,16 +238,16 @@ A table created with `LOCATION` registers an existing Delta dataset; it does not
 ```sql
 SHOW TABLES IN lakehouse;
 
-DESCRIBE lakehouse.people_v2;
+DESCRIBE lakehouse.people;
 
-DESCRIBE EXTENDED lakehouse.people_v2;
+DESCRIBE EXTENDED lakehouse.people;
 ```
 
 ### 10.4 Read Data
 
 ```sql
 SELECT *
-FROM lakehouse.people_v2
+FROM lakehouse.people
 ORDER BY id;
 ```
 
@@ -320,14 +255,14 @@ Count records:
 
 ```sql
 SELECT COUNT(*)
-FROM lakehouse.people_v2;
+FROM lakehouse.people;
 ```
 
 Filter and sort records:
 
 ```sql
 SELECT name, age
-FROM lakehouse.people_v2
+FROM lakehouse.people
 WHERE age >= 30
 ORDER BY age;
 ```
@@ -335,7 +270,7 @@ ORDER BY age;
 ### 10.5 Insert a New Record
 
 ```sql
-INSERT INTO lakehouse.people_v2
+INSERT INTO lakehouse.people
 VALUES (5, 'Eve', 22);
 ```
 
@@ -343,7 +278,7 @@ Verify the result:
 
 ```sql
 SELECT *
-FROM lakehouse.people_v2
+FROM lakehouse.people
 ORDER BY id;
 ```
 
@@ -351,22 +286,16 @@ The expected example contains five records after the insert, assuming the initia
 
 ## 11. Verify Delta Lake Files in MinIO
 
-Configure the MinIO client alias from inside the MinIO container:
-
-```powershell
-docker exec minio mc alias set local http://127.0.0.1:9000 minioadmin minioadmin123
-```
-
 List the objects in the original table:
 
 ```powershell
 docker exec minio mc ls --recursive local/lake/warehouse/people/
 ```
 
-List the objects in `people_v2`:
+List the objects in `people`:
 
 ```powershell
-docker exec minio mc ls --recursive local/lake/warehouse/people_v2/
+docker exec minio mc ls --recursive local/lake/warehouse/people/
 ```
 
 List all objects in the bucket:
@@ -379,7 +308,9 @@ A Delta table typically contains a `_delta_log` directory and one or more data f
 
 ## 12. Query Delta Lake Through Trino
 
-Connect to the Trino CLI or your configured SQL client.
+```powershell
+docker exec -it  trino  trino
+```
 
 ### 12.1 List Catalogs
 
@@ -399,7 +330,7 @@ SHOW TABLES FROM delta.lakehouse;
 
 ```sql
 SELECT *
-FROM delta.lakehouse.people_v2
+FROM delta.lakehouse.people
 ORDER BY id;
 ```
 
@@ -407,14 +338,14 @@ Count records:
 
 ```sql
 SELECT COUNT(*)
-FROM delta.lakehouse.people_v2;
+FROM delta.lakehouse.people;
 ```
 
 Filter and sort:
 
 ```sql
 SELECT name, age
-FROM delta.lakehouse.people_v2
+FROM delta.lakehouse.people
 WHERE age >= 30
 ORDER BY age;
 ```
