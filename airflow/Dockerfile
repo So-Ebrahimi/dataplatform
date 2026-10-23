@@ -28,3 +28,9 @@ RUN pip install \
     "apache-airflow-providers-apache-spark" \
     --constraint \
     "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.11.txt"
+
+
+RUN pip install \
+    deltalake \
+    pyarrow \
+    pandas

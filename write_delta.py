@@ -1,35 +1,69 @@
-from deltalake import DeltaTable, write_deltalake
-import pyarrow as pa
 
-storage_options = {
-    "AWS_ACCESS_KEY_ID": "minioadmin",
-    "AWS_SECRET_ACCESS_KEY": "minioadmin123",
-    "AWS_ENDPOINT_URL": "http://127.0.0.1:9100",
-    "AWS_REGION": "us-east-1",
-    "AWS_ALLOW_HTTP": "true",
-}
+from pyspark.sql import SparkSession
+from delta import configure_spark_with_delta_pip
+from delta.tables import DeltaTable
 
-data = pa.table({
-    "id": [1, 2, 3, 4],
-    "name": ["Alice", "Bob", "Charlie", "Diana"],
-    "age": [25, 30, 35, 28],
-})
-
-table_path = "s3://lake/warehouse/people"
-
-write_deltalake(
-    table_path,
-    data,
-    mode="overwrite",
-    storage_options=storage_options,
+spark = (
+    configure_spark_with_delta_pip(
+        SparkSession.builder
+        .appName("WriteDeltaPeople")
+        .master("spark://spark-master:7077")
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension",
+        )
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        )
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9100")
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin")
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123")
+        .config("spark.hadoop.fs.s3a.path.style.access", "true")
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
+        .config("spark.hadoop.fs.s3a.impl",
+                "org.apache.hadoop.fs.s3a.S3AFileSystem")
+        .config("spark.hadoop.fs.s3a.aws.credentials.provider",
+                "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+        .config("spark.sql.shuffle.partitions", "2")
+    )
+    .getOrCreate()
 )
 
-dt = DeltaTable(
-    table_path,
-    storage_options=storage_options,
-)
+try:
+    table_path = "s3a://lake/warehouse/people"
 
-print("Version:", dt.version())
-print("Schema:", dt.schema().json())
-print("Files:", dt.file_uris())
-print(dt.to_pyarrow_table().to_pylist())
+    data = [
+        (1, "Alice", 25),
+        (2, "Bob", 30),
+        (3, "Charlie", 35),
+        (4, "Diana", 28),
+    ]
+
+    columns = ["id", "name", "age"]
+
+    df = spark.createDataFrame(data, columns)
+
+    # Write the Delta table
+    (
+        df.write
+        .format("delta")
+        .mode("overwrite")
+        .save(table_path)
+    )
+
+    # Read it back
+    dt = DeltaTable.forPath(spark, table_path)
+
+    print("Version:", dt.history(1).select("version").first()["version"])
+    print("Schema:", spark.read.format("delta").load(table_path).schema.json())
+
+    print("Files:")
+    for file in dt.toDF().inputFiles():
+        print(file)
+
+    print("Rows:")
+    spark.read.format("delta").load(table_path).show(truncate=False)
+
+finally:
+    spark.stop()

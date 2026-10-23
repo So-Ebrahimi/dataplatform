@@ -12,7 +12,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__FERNET_KEY: ""
     AIRFLOW__WEBSERVER__SECRET_KEY: "change-this-secret-key"
     AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
-    AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077"
+    AIRFLOW_CONN_SPARK_DEFAULT: '{"conn_type":"spark","host":"spark://spark-master","port":7077}'
     SPARK_HOME: /opt/spark
     JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
   volumes:
