@@ -1,2 +1,5 @@
 /DockerImages
 /deltalake/spark
+/spark/spark
+/spark/postgresql-42.7.7.jar
+/spark/pyspark-4.0.1.tar.gz

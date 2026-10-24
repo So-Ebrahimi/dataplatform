@@ -13,6 +13,9 @@ services:
       - "7077"
       - --webui-port
       - "8080"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
     ports:
       - "8080:8080"
       - "7077:7077"
@@ -29,6 +32,9 @@ services:
       - spark://spark-master:7077
       - --webui-port
       - "8081"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
     depends_on:
       - spark-master
     ports:
@@ -49,6 +55,9 @@ services:
       - spark://spark-master:7077
       - --webui-port
       - "8081"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
     depends_on:
       - spark-master
     ports:
@@ -58,6 +67,55 @@ services:
       SPARK_WORKER_MEMORY: 2g
     networks:
       - dataplatform
+
+
+
+  spark-worker-3:
+    image: apache/spark:4.0.1
+    container_name: spark-worker-3
+    hostname: spark-worker-3
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --webui-port
+      - "8081"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
+    depends_on:
+      - spark-master
+    ports:
+      - "8083:8081"
+    environment:
+      SPARK_WORKER_CORES: "2"
+      SPARK_WORKER_MEMORY: 2g
+    networks:
+      - dataplatform
+
+  spark-worker-4:
+    image: apache/spark:4.0.1
+    container_name: spark-worker-4
+    hostname: spark-worker-4
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --webui-port
+      - "8081"
+    volumes:
+      - ./spark/ivy/cache:/tmp/ivy/cache
+      - ./spark/ivy/jars:/tmp/ivy/jars
+    depends_on:
+      - spark-master
+    ports:
+      - "8084:8081"
+    environment:
+      SPARK_WORKER_CORES: "2"
+      SPARK_WORKER_MEMORY: 2g
+    networks:
+      - dataplatform
+
 
 networks:
   dataplatform:
