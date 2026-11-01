@@ -19,6 +19,8 @@ services:
     ports:
       - "8080:8080"
       - "7077:7077"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - dataplatform
 
@@ -40,8 +42,10 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPARK_WORKER_CORES: "2"
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: "4"
+      SPARK_WORKER_MEMORY: 6g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - dataplatform
 
@@ -63,8 +67,10 @@ services:
     ports:
       - "8082:8081"
     environment:
-      SPARK_WORKER_CORES: "2"
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: "4"
+      SPARK_WORKER_MEMORY: 6g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - dataplatform
 
@@ -88,8 +94,10 @@ services:
     ports:
       - "8083:8081"
     environment:
-      SPARK_WORKER_CORES: "2"
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: "4"
+      SPARK_WORKER_MEMORY: 6g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - dataplatform
 
@@ -111,8 +119,10 @@ services:
     ports:
       - "8084:8081"
     environment:
-      SPARK_WORKER_CORES: "2"
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: "4"
+      SPARK_WORKER_MEMORY: 6g
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - dataplatform
 

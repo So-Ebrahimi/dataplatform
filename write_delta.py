@@ -9,8 +9,14 @@ from pyspark.sql import functions as F
 # ------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------
+os.environ["HADOOP_HOME"] = r"C:\hadoop"
+os.environ["hadoop.home.dir"] = r"C:\hadoop"
 
-NUM_ROWS = int(os.getenv("NUM_ROWS", "10000000"))
+os.environ["PATH"] = (
+    os.environ["PATH"] + os.pathsep + r"C:\hadoop\bin"
+)
+
+NUM_ROWS = int(os.getenv("NUM_ROWS", "100"))
 NUM_DAYS = 30
 NUM_WRITE_PARTITIONS = int(os.getenv("NUM_WRITE_PARTITIONS", "16"))
 
@@ -25,7 +31,7 @@ MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin123"
 
 BUCKET = os.getenv("MINIO_BUCKET", "spark-delta")
-TABLE_PATH = f"s3a://{BUCKET}/large-events/"
+TABLE_PATH = f"s3a://{BUCKET}/large-events"
 
 
 # ------------------------------------------------------------
@@ -73,15 +79,23 @@ spark = (
     )
 
     # Large-write test tuning.
-    .config("spark.cores.max", "8")
-    .config("spark.executor.cores", "2")
+    .config("spark.cores.max", "16")
+    .config("spark.executor.cores", "4")
     .config("spark.sql.shuffle.partitions", str(NUM_WRITE_PARTITIONS))
     .config("spark.sql.files.maxRecordsPerFile", "1000000")
     .config("spark.sql.parquet.compression.codec", "snappy")
+    .config("spark.hadoop.fs.s3a.fast.upload", "true")
+    .config("spark.hadoop.fs.s3a.fast.upload.buffer", "array")
 
     .getOrCreate()
 )
+hconf = spark.sparkContext._jsc.hadoopConfiguration()
 
+hconf.set("fs.s3a.fast.upload", "true")
+hconf.set("fs.s3a.fast.upload.buffer", "array")
+
+print("S3A fast upload:", hconf.get("fs.s3a.fast.upload"))
+print("S3A upload buffer:", hconf.get("fs.s3a.fast.upload.buffer"))
 spark.sparkContext.setLogLevel("WARN")
 
 
