@@ -1,0 +1,33 @@
+
+services:
+  jobmanager:
+    image: flink:2.1.0
+    container_name: flink-jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        parallelism.default: 2
+    networks:
+      - flink-network
+
+  taskmanager:
+    image: flink:2.1.0
+    container_name: flink-taskmanager
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    networks:
+      - flink-network
+
+networks:
+  flink-network:
+    driver: bridge
