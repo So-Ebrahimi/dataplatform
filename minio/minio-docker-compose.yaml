@@ -1,0 +1,72 @@
+
+services:
+  minio1: &minio
+    image: pgsty/minio
+    hostname: minio1
+    command:
+      - server
+      - --console-address
+      - ":9001"
+      - "http://minio{1...4}/data{1...2}"
+    environment: &minio-env
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio1_data1:/data1
+      - minio1_data2:/data2
+    networks:
+      - dataplatform
+
+  minio2:
+    <<: *minio
+    hostname: minio2
+    volumes:
+      - minio2_data1:/data1
+      - minio2_data2:/data2
+
+  minio3:
+    <<: *minio
+    hostname: minio3
+    volumes:
+      - minio3_data1:/data1
+      - minio3_data2:/data2
+
+  minio4:
+    <<: *minio
+    hostname: minio4
+    volumes:
+      - minio4_data1:/data1
+      - minio4_data2:/data2
+
+
+
+  haproxy:
+    image: haproxy:3.2
+    ports:
+      - "9100:9000"  # S3 API
+      - "9101:9001"  # MinIO Web Console
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - dataplatform
+    depends_on:
+      - minio1
+      - minio2
+      - minio3
+      - minio4
+    restart: unless-stopped
+
+
+volumes:
+  minio1_data1:
+  minio1_data2:
+  minio2_data1:
+  minio2_data2:
+  minio3_data1:
+  minio3_data2:
+  minio4_data1:
+  minio4_data2:
+
+networks:
+  dataplatform:
+    external: true
